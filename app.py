@@ -1,14 +1,20 @@
 import streamlit as st
 
+# =========================================================
+# إعداد الصفحة
+# =========================================================
+
 st.set_page_config(
     page_title="نبضة AI",
     page_icon="❤️",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# -----------------------------
+# =========================================================
 # حالة الجلسة
-# -----------------------------
+# =========================================================
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -19,86 +25,125 @@ if "answered" not in st.session_state:
     st.session_state.answered = False
 
 
-# -----------------------------
-# التصميم
-# -----------------------------
-st.markdown("""
-<style>
+# =========================================================
+# تصميم الواجهة
+# =========================================================
 
-.stApp {
-    direction: rtl;
-    text-align: right;
-    background: linear-gradient(135deg, #fff7f9 0%, #f5f8ff 100%);
-}
+st.markdown(
+    """
+    <style>
 
-.block-container {
-    max-width: 760px;
-    padding-top: 2.5rem;
-}
+    /* اتجاه الصفحة */
+    .stApp {
+        direction: rtl;
+        text-align: right;
+        background: linear-gradient(
+            135deg,
+            #fff8fa 0%,
+            #f7f9ff 100%
+        );
+    }
 
-.nabda-title {
-    text-align:center;
-    font-size:46px;
-    font-weight:800;
-    color:#d94b68;
-}
+    /* عرض الصفحة */
+    .block-container {
+        max-width: 720px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
 
-.nabda-subtitle {
-    text-align:center;
-    color:#64748b;
-    font-size:19px;
-    margin-bottom:30px;
-}
+    /* عنوان نبضة */
+    .nabda-title {
+        text-align: center;
+        font-size: 42px;
+        font-weight: 800;
+        color: #d94b68;
+        margin-bottom: 5px;
+    }
 
-.card {
-    background:white;
-    padding:28px;
-    border-radius:24px;
-    border:1px solid #f0d9df;
-    box-shadow:0 8px 24px rgba(0,0,0,.05);
-    margin:18px 0;
-}
+    /* العنوان الفرعي */
+    .nabda-subtitle {
+        text-align: center;
+        color: #64748b;
+        font-size: 18px;
+        margin-bottom: 28px;
+    }
 
-.student-card {
-    background:#fff0f4;
-    padding:18px 22px;
-    border-radius:18px;
-    margin-bottom:20px;
-}
+    /* البطاقة البيضاء */
+    .nabda-card {
+        background-color: #ffffff;
+        padding: 26px;
+        border-radius: 22px;
+        border: 1px solid #f0d9df;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        margin-top: 15px;
+        margin-bottom: 22px;
+    }
 
-.question-number {
-    color:#d94b68;
-    font-weight:700;
-    font-size:16px;
-}
+    /* بطاقة الطالبة */
+    .student-card {
+        background-color: #fff0f4;
+        padding: 18px 22px;
+        border-radius: 18px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+        color: #374151;
+        font-size: 17px;
+    }
 
-.question-text {
-    color:#26364a;
-    font-weight:700;
-    font-size:22px;
-    line-height:1.8;
-}
+    /* رقم السؤال */
+    .question-number {
+        color: #d94b68;
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
 
-.small-text {
-    color:#64748b;
-    font-size:14px;
-}
+    /* نص السؤال */
+    .question-text {
+        color: #26364a;
+        font-weight: 700;
+        font-size: 21px;
+        line-height: 1.8;
+    }
 
-div.stButton > button {
-    width:100%;
-    min-height:50px;
-    border-radius:14px;
-    font-size:17px;
-    font-weight:700;
-}
+    /* النص الصغير */
+    .small-text {
+        color: #64748b;
+        font-size: 14px;
+        text-align: center;
+        margin-top: 18px;
+    }
 
-</style>
-""", unsafe_allow_html=True)
+    /* الأزرار */
+    div.stButton > button {
+        width: 100%;
+        min-height: 48px;
+        border-radius: 14px;
+        font-size: 17px;
+        font-weight: 700;
+        border: 1px solid #ead5dc;
+    }
+
+    div.stButton > button:hover {
+        border-color: #d94b68;
+        color: #d94b68;
+    }
+
+    /* حقل الإدخال */
+    div[data-baseweb="input"] {
+        border-radius: 14px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
-# -----------------------------
+# =========================================================
 # رأس الصفحة
-# -----------------------------
+# =========================================================
+
 st.markdown(
     '<div class="nabda-title">❤️ نبضة AI</div>',
     unsafe_allow_html=True
@@ -110,22 +155,37 @@ st.markdown(
 )
 
 
-# ==================================================
-# الشاشة الأولى: الدخول
-# ==================================================
+# =========================================================
+# الشاشة الأولى: تسجيل الدخول
+# =========================================================
+
 if not st.session_state.logged_in:
 
-    st.markdown("""
-    <div class="card">
-        <h2 style="text-align:center;color:#26364a;">
-            مرحبًا بكِ 🌷
-        </h2>
+    st.markdown(
+        """
+        <div class="nabda-card">
+            <h2 style="
+                text-align:center;
+                color:#26364a;
+                margin-bottom:12px;
+            ">
+                🌷 مرحبًا بكِ
+            </h2>
 
-        <p style="text-align:center;color:#64748b;font-size:17px;">
-            هذه البيئة التعليمية مخصصة للمشاركات المصرح لهن في الدراسة.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+            <p style="
+                text-align:center;
+                color:#64748b;
+                font-size:17px;
+                line-height:1.8;
+                margin:0;
+            ">
+                هذه البيئة التعليمية مخصصة للمشاركات
+                المصرح لهن في الدراسة.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     access_code = st.text_input(
         "رمز الدخول الخاص بكِ",
@@ -135,44 +195,71 @@ if not st.session_state.logged_in:
 
     if st.button("دخول إلى نبضة ❤️"):
 
-        # دخول تجريبي مؤقت فقط
         if access_code.strip() == "":
-            st.warning("يرجى إدخال رمز الدخول.")
+            st.warning("يرجى إدخال رمز الدخول 🌷")
 
         else:
+            # مؤقت للتجربة فقط
+            # سنربطه لاحقًا برموز الدخول الآمنة
             st.session_state.logged_in = True
             st.rerun()
 
     st.markdown(
-        '<p class="small-text" style="text-align:center;">🔒 لا تكتبي اسمكِ أو أي بيانات شخصية.</p>',
+        """
+        <div class="small-text">
+            🔒 لا تكتبي اسمكِ أو أي بيانات شخصية.
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
 
-# ==================================================
-# الشاشة الثانية: الصفحة الرئيسية
-# ==================================================
+# =========================================================
+# الشاشة الثانية: الصفحة الرئيسية للطالبة
+# =========================================================
+
 elif not st.session_state.started:
 
-    st.markdown("""
-    <div class="student-card">
-        <b>🌷 أهلًا بكِ في جلسة اليوم</b><br>
-        سنراجع بعض الأفكار، وستتغير الأسئلة حسب إجاباتكِ.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="student-card">
+            🌷 <strong>أهلًا بكِ في جلسة اليوم</strong>
+            <br><br>
+            سنراجع بعض الأفكار العلمية،
+            وستتغير الأسئلة والمساعدة المقدمة لكِ
+            حسب إجاباتكِ.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("""
-    <div class="card">
-        <h3 style="color:#26364a;">
-            🫀 جهازا الدوران والمناعة
-        </h3>
+    st.markdown(
+        """
+        <div class="nabda-card">
 
-        <p style="color:#64748b;">
-            في هذه الجلسة ستجيبِين عن مجموعة قصيرة من الأسئلة.
-            إذا احتجتِ إلى مساعدة، ستقدم لكِ نبضة تلميحات تدريجية.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+            <h3 style="
+                color:#26364a;
+                margin-top:0;
+            ">
+                🫀 جهازا الدوران والمناعة
+            </h3>
+
+            <p style="
+                color:#64748b;
+                font-size:16px;
+                line-height:1.9;
+            ">
+                في هذه الجلسة ستجيبين عن مجموعة
+                من الأسئلة المتنوعة.
+                وإذا احتجتِ إلى مساعدة،
+                ستقدم لكِ نبضة تلميحات تدريجية
+                تساعدكِ على الوصول إلى الإجابة.
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.progress(0)
 
@@ -180,30 +267,38 @@ elif not st.session_state.started:
 
     if st.button("ابدئي جلسة اليوم ←"):
         st.session_state.started = True
+        st.session_state.answered = False
         st.rerun()
 
 
-# ==================================================
-# الشاشة الثالثة: أول سؤال
-# ==================================================
+# =========================================================
+# الشاشة الثالثة: السؤال الأول
+# =========================================================
+
 else:
 
-    st.progress(0.10)
+    st.progress(10)
+
     st.caption("التقدم في جلسة اليوم: 10%")
 
-    st.markdown("""
-    <div class="card">
+    st.markdown(
+        """
+        <div class="nabda-card">
 
-        <div class="question-number">
-            السؤال 1
+            <div class="question-number">
+                السؤال 1
+            </div>
+
+            <div class="question-text">
+                أيُّ مكوّن من مكوّنات الدم
+                يساعد بصورة أساسية على تجلط الدم
+                عند حدوث جرح؟
+            </div>
+
         </div>
-
-        <div class="question-text">
-            أيُّ مكوّن من مكوّنات الدم يساعد بصورة أساسية على تجلط الدم عند حدوث جرح؟
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
     answer = st.radio(
         "اختاري إجابة واحدة:",
@@ -220,34 +315,59 @@ else:
 
         if answer is None:
 
-            st.warning("اختاري إجابة أولًا 🌷")
+            st.warning(
+                "اختاري إجابة أولًا 🌷"
+            )
 
         elif answer == "الصفائح الدموية":
 
             st.session_state.answered = True
 
             st.success(
-                "🌟 إجابة صحيحة! الصفائح الدموية تساعد على تجلط الدم وإيقاف النزيف."
+                "🌟 إجابة صحيحة!"
+            )
+
+            st.info(
+                "الصفائح الدموية تساعد على "
+                "تجلط الدم وإيقاف النزيف."
             )
 
             st.markdown(
-                "🟢 **مؤشر أولي:** أظهرتِ فهمًا جيدًا لهذه الفكرة."
+                "🟢 **مؤشر أولي:** "
+                "أظهرتِ فهمًا جيدًا لهذه الفكرة."
             )
 
         else:
 
             st.session_state.answered = True
 
-            st.warning("ليست الإجابة الأدق. حاولي التفكير مرة أخرى.")
+            st.warning(
+                "ليست الإجابة الأدق. "
+                "حاولي التفكير مرة أخرى."
+            )
 
             st.info(
-                "💡 تلميح نبضة H1: فكري في المكوّن الذي يساعد الجسم على إيقاف النزيف بعد حدوث الجرح."
+                "💡 تلميح نبضة H1: "
+                "فكري في المكوّن الذي يساعد الجسم "
+                "على إيقاف النزيف بعد حدوث الجرح."
             )
+
+
+    # =====================================================
+    # بعد الإجابة
+    # =====================================================
 
     if st.session_state.answered:
 
         st.markdown("---")
 
         st.caption(
-            "هذه النسخة تجريبية. في النسخة التكيفية ستحدد نبضة السؤال التالي وفق إجابتكِ ومحاولاتكِ."
+            "هذه نسخة تجريبية أولية. "
+            "لاحقًا ستختار نبضة السؤال التالي "
+            "وفق إجابتكِ ومحاولاتكِ ومستوى إتقانكِ."
         )
+
+
+# =========================================================
+# نهاية التطبيق
+# =========================================================
