@@ -1,5 +1,5 @@
 import streamlit as st
-
+from questions import QUESTIONS, CONCEPTS
 # =========================================================
 # إعداد الصفحة
 # =========================================================
@@ -143,7 +143,17 @@ questions = [
     }
 ]
 
+questions = QUESTIONS
+# توحيد حقول بنك الأسئلة الجديد مع المحرك الحالي
+for q in questions:
+    if "lesson" not in q:
+        q["lesson"] = q.get("micro_lesson", "")
 
+    if "micro_lesson" in q:
+        q["lesson"] = q["micro_lesson"]
+
+    if "equivalent" not in q:
+        q["equivalent"] = q["question"]
 # =========================================================
 # التنسيق
 # =========================================================
