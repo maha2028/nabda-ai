@@ -1,157 +1,175 @@
 import streamlit as st
+import random
 from questions import QUESTIONS, CONCEPTS
 
 # =========================================================
-# ScAI - المساعد الذكي التكيفي لتعلم العلوم
+# ScAI V3
+# مساعد ذكي تكيفي لتعلم العلوم
 # =========================================================
 
 st.set_page_config(
-    page_title="ScAI",
+    page_title="ScAI | تعلم العلوم",
     page_icon="🔬",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    layout="centered"
 )
 
 # =========================================================
-# تنسيق الواجهة
+# التصميم
 # =========================================================
 
+st.markdown("""
+<style>
+
+html, body, [class*="css"] {
+    direction: rtl;
+    text-align: right;
+}
+
+.stApp {
+    background: linear-gradient(
+        180deg,
+        #fffafd 0%,
+        #f7f9ff 100%
+    );
+}
+
+.block-container {
+    max-width: 1000px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+}
+
+.logo {
+    text-align:center;
+    font-size:58px;
+    font-weight:800;
+    color:#e34b70;
+    margin-bottom:0;
+}
+
+.subtitle {
+    text-align:center;
+    font-size:25px;
+    color:#5c6477;
+    margin-top:-8px;
+    margin-bottom:35px;
+}
+
+.question-box {
+    background:white;
+    border:1px solid #ece7eb;
+    border-radius:22px;
+    padding:28px;
+    margin-top:20px;
+    margin-bottom:20px;
+    box-shadow:0 4px 15px rgba(0,0,0,.03);
+}
+
+.concept-card {
+    background:#f4f7ff;
+    border-radius:15px;
+    padding:15px;
+    margin-bottom:15px;
+}
+
+.correct-box {
+    background:#e9f8ef;
+    color:#167a3c;
+    border-radius:15px;
+    padding:18px;
+    font-size:18px;
+}
+
+.hint-box {
+    background:#eef5ff;
+    color:#155da7;
+    border-radius:15px;
+    padding:18px;
+}
+
+.lesson-box {
+    background:#fff8dc;
+    color:#795d00;
+    border-radius:15px;
+    padding:20px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================================================
+# شعار
+# =========================================================
+
+st.markdown('<div class="logo">🔬 ScAI</div>', unsafe_allow_html=True)
 st.markdown(
-    """
-    <style>
-    .stApp {
-        direction: rtl;
-        text-align: right;
-        background: linear-gradient(180deg, #fffafd 0%, #f7f9ff 100%);
-    }
-
-    h1, h2, h3, p, div, label {
-        direction: rtl;
-        text-align: right;
-    }
-
-    .main-title {
-        text-align: center;
-        font-size: 54px;
-        font-weight: 800;
-        color: #d94b70;
-        margin-bottom: 0;
-    }
-
-    .subtitle {
-        text-align: center;
-        color: #596275;
-        font-size: 20px;
-        margin-bottom: 25px;
-    }
-
-    .question-box {
-        padding: 22px;
-        border: 1px solid #e4dce3;
-        border-radius: 15px;
-        background: white;
-        margin: 15px 0;
-        font-size: 22px;
-        font-weight: 700;
-    }
-
-    .info-box {
-        padding: 16px;
-        border-radius: 14px;
-        background: #eaf3ff;
-        color: #075fae;
-        margin: 12px 0;
-    }
-
-    .mastery-box {
-        padding: 12px;
-        border-radius: 12px;
-        background: white;
-        border: 1px solid #ececec;
-        margin-bottom: 8px;
-    }
-    </style>
-    """,
+    '<div class="subtitle">مساعدكِ الذكي التكيفي لتعلّم العلوم</div>',
     unsafe_allow_html=True
 )
 
-# =========================================================
-# رأس الصفحة
-# =========================================================
-
-st.markdown('<div class="main-title">ScAI 🔬</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="subtitle">مساعدكِ الذكي التكيفي لتعلُّم العلوم</div>',
-    unsafe_allow_html=True
-)
 
 # =========================================================
-# حالة الجلسة
+# SESSION STATE
 # =========================================================
 
 defaults = {
     "logged_in": False,
-    "student_code": "",
     "started": False,
-
-    "question_index": 0,
+    "phase": "diagnostic",
+    "current_question": None,
     "attempt": 0,
-    "score": 0,
-    "total_answered": 0,
-
-    "feedback": "",
     "hint_level": 0,
     "show_lesson": False,
     "equivalent_mode": False,
+    "feedback": "",
     "answered": False,
-
-    "completed": False,
-
-    "phase": "diagnostic",
-    "diagnostic_done": [],
-
+    "score": 0,
+    "total_answered": 0,
     "seen": [],
-
-    "mastery": {}
+    "diagnostic_done": [],
+    "session_questions": 0,
+    "max_session_questions": 12,
+    "mastery": {},
+    "history": []
 }
 
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# إنشاء خريطة إتقان لجميع المفاهيم
-for concept_id, concept_name in CONCEPTS.items():
-    if concept_id not in st.session_state.mastery:
-        st.session_state.mastery[concept_id] = {
-            "name": concept_name,
+
+# إنشاء خريطة الإتقان
+
+for cid, name in CONCEPTS.items():
+
+    if cid not in st.session_state.mastery:
+
+        st.session_state.mastery[cid] = {
+            "name": name,
             "correct": 0,
             "wrong": 0,
-            "status": "⚪ لم يُقيَّم"
+            "status": "⚪ لم يُقيّم"
         }
 
+
 # =========================================================
-# وظائف مساعدة
+# دوال مساعدة
 # =========================================================
 
 def reset_question_state():
+
     st.session_state.attempt = 0
-    st.session_state.feedback = ""
     st.session_state.hint_level = 0
     st.session_state.show_lesson = False
     st.session_state.equivalent_mode = False
+    st.session_state.feedback = ""
     st.session_state.answered = False
 
 
-def update_mastery(concept_id, correct):
-    if concept_id not in st.session_state.mastery:
-        st.session_state.mastery[concept_id] = {
-            "name": CONCEPTS.get(concept_id, concept_id),
-            "correct": 0,
-            "wrong": 0,
-            "status": "⚪ لم يُقيَّم"
-        }
+def update_mastery(cid, correct):
 
-    data = st.session_state.mastery[concept_id]
+    data = st.session_state.mastery[cid]
 
     if correct:
         data["correct"] += 1
@@ -163,112 +181,133 @@ def update_mastery(concept_id, correct):
 
     if c >= 2 and w == 0:
         data["status"] = "🟢 متقن"
-    elif c >= 1 and c >= w:
+
+    elif c >= 2 and c > w:
         data["status"] = "🟡 في طور الإتقان"
+
     elif w >= 1:
-        data["status"] = "🔴 يحتاج دعمًا"
+        data["status"] = "🔴 يحتاج دعماً"
+
     else:
-        data["status"] = "⚪ لم يُقيَّم"
+        data["status"] = "⚪ لم يُقيّم"
 
 
-def move_next():
-    st.session_state.question_index += 1
-    reset_question_state()
+def weak_concepts():
 
-    if st.session_state.question_index >= len(QUESTIONS):
-        st.session_state.completed = True
-        st.session_state.question_index = max(len(QUESTIONS) - 1, 0)
+    weak = []
+
+    for cid, data in st.session_state.mastery.items():
+
+        if data["wrong"] > 0 or data["status"] == "🔴 يحتاج دعماً":
+            weak.append(cid)
+
+    return weak
 
 
-def restart():
-    keys_to_reset = [
-        "started",
-        "question_index",
-        "attempt",
-        "score",
-        "total_answered",
-        "feedback",
-        "hint_level",
-        "show_lesson",
-        "equivalent_mode",
-        "answered",
-        "completed",
-        "phase",
-        "diagnostic_done",
-        "seen"
+def questions_for_concept(cid):
+
+    return [
+        q for q in QUESTIONS
+        if q["concept_id"] == cid
     ]
 
-    for key in keys_to_reset:
-        if key in defaults:
-            st.session_state[key] = defaults[key]
 
-    st.session_state.mastery = {}
+def unseen_questions(pool):
 
-    for concept_id, concept_name in CONCEPTS.items():
-        st.session_state.mastery[concept_id] = {
-            "name": concept_name,
-            "correct": 0,
-            "wrong": 0,
-            "status": "⚪ لم يُقيَّم"
-        }
+    return [
+        q for q in pool
+        if q["id"] not in st.session_state.seen
+    ]
 
 
-def normalize_text(text):
-    if text is None:
-        return ""
+# =========================================================
+# اختيار السؤال تكيفياً
+# =========================================================
 
-    text = str(text).strip().lower()
+def choose_next_question():
 
-    replacements = {
-        "أ": "ا",
-        "إ": "ا",
-        "آ": "ا",
-        "ة": "ه",
-        "ى": "ي"
-    }
+    # ------------------------------
+    # المرحلة الأولى: التشخيص
+    # ------------------------------
 
-    for old, new in replacements.items():
-        text = text.replace(old, new)
+    if st.session_state.phase == "diagnostic":
 
-    return " ".join(text.split())
+        remaining_concepts = [
+            cid for cid in CONCEPTS
+            if cid not in st.session_state.diagnostic_done
+        ]
 
+        if remaining_concepts:
 
-def is_correct_answer(question, answer):
-    if answer is None:
-        return False
+            cid = remaining_concepts[0]
 
-    expected = question.get("answer", "")
+            pool = questions_for_concept(cid)
+            pool = unseen_questions(pool)
 
-    if question.get("type", "mcq") == "short_answer":
-        user_answer = normalize_text(answer)
+            if not pool:
+                pool = questions_for_concept(cid)
 
-        accepted = question.get("accepted_answers", [])
+            if pool:
+                return random.choice(pool)
 
-        if not accepted:
-            accepted = [expected]
-
-        accepted = [normalize_text(x) for x in accepted]
-
-        return user_answer in accepted
-
-    return str(answer).strip() == str(expected).strip()
+        st.session_state.phase = "adaptive"
 
 
-def show_mastery_map():
-    with st.expander("🧠 خريطة إتقاني", expanded=False):
+    # ------------------------------
+    # المرحلة التكيفية
+    # ------------------------------
 
-        for concept_id, data in st.session_state.mastery.items():
-            st.markdown(
-                f"""
-                <div class="mastery-box">
-                <b>{data['name']}</b><br>
-                {data['status']}<br>
-                صحيحة: {data['correct']} |
-                تحتاج مراجعة: {data['wrong']}
-                </div>
-                """,
-                unsafe_allow_html=True
+    weak = weak_concepts()
+
+    if weak:
+
+        random.shuffle(weak)
+
+        for cid in weak:
+
+            pool = unseen_questions(
+                questions_for_concept(cid)
             )
+
+            if pool:
+                return random.choice(pool)
+
+
+    # ------------------------------
+    # إذا لم توجد نقاط ضعف
+    # ------------------------------
+
+    pool = unseen_questions(QUESTIONS)
+
+    if pool:
+        return random.choice(pool)
+
+    return random.choice(QUESTIONS)
+
+
+def load_next_question():
+
+    reset_question_state()
+
+    st.session_state.current_question = choose_next_question()
+
+
+# =========================================================
+# تسجيل الاستجابة
+# =========================================================
+
+def log_response(question, answer, correct):
+
+    st.session_state.history.append({
+
+        "question_id": question["id"],
+        "concept_id": question["concept_id"],
+        "answer": str(answer),
+        "correct": correct,
+        "attempt": st.session_state.attempt,
+        "hint_level": st.session_state.hint_level
+
+    })
 
 
 # =========================================================
@@ -278,246 +317,321 @@ def show_mastery_map():
 if not st.session_state.logged_in:
 
     st.info(
-        "مرحبًا بكِ في ScAI. هذه البيئة مخصصة للمشاركات المصرح لهن في الدراسة."
+        "مرحباً بكِ في ScAI. "
+        "هذه البيئة مخصصة للمشاركات المصرح لهن في الدراسة."
     )
 
-    code = st.text_input(
+    access_code = st.text_input(
         "أدخلي رمز الدخول البحثي",
         type="password",
         placeholder="رمز الدخول"
     )
 
-    st.caption("لا تكتبي اسمكِ أو أي بيانات شخصية.")
+    st.caption(
+        "لا تكتبي اسمكِ أو أي بيانات شخصية."
+    )
 
-    if st.button("دخول إلى ScAI", use_container_width=True):
+    if st.button(
+        "دخول إلى ScAI",
+        use_container_width=True
+    ):
 
-        # مؤقت أثناء التطوير:
-        # أي رمز غير فارغ يسمح بالدخول.
-        # لاحقًا ستُنقل الرموز الحقيقية إلى Streamlit Secrets.
+        # مؤقت للاختبار فقط
+        if access_code.strip():
 
-        if code.strip():
             st.session_state.logged_in = True
-            st.session_state.student_code = code.strip()
             st.rerun()
+
         else:
-            st.warning("أدخلي رمز الدخول أولًا.")
+
+            st.warning("أدخلي رمز الدخول.")
 
     st.stop()
 
+
 # =========================================================
-# الصفحة الترحيبية
+# شاشة البداية
 # =========================================================
 
 if not st.session_state.started:
 
     st.success("تم الدخول بنجاح 🌷")
 
-    st.markdown(
-        """
-        ### كيف سيعمل ScAI معكِ؟
+    st.markdown("## كيف سيعمل ScAI معكِ؟")
 
-        سيبدأ بأسئلة قصيرة للتعرّف إلى المفاهيم التي تتقنينها
-        والمفاهيم التي تحتاج إلى دعم.
-
-        إذا كانت الإجابة غير صحيحة فلن يعطيكِ الحل مباشرة؛
-        بل سيقدّم تلميحًا، ثم تلميحًا أقوى، ثم مراجعة قصيرة،
-        وبعدها سؤالًا مكافئًا للتأكد من الفهم.
-        """
+    st.write(
+        "سيبدأ بأسئلة تشخيصية قصيرة، ثم يحدد المفاهيم "
+        "التي أتقنتِها والمفاهيم التي تحتاج إلى دعم."
     )
 
-    if st.button("ابدئي رحلة التعلم 🚀", use_container_width=True):
+    st.write(
+        "إذا كانت الإجابة غير صحيحة فلن يعطيكِ الحل مباشرة؛ "
+        "سيقدم تلميحاً، ثم تلميحاً أقوى، ثم مراجعة قصيرة "
+        "وسؤالاً مكافئاً."
+    )
+
+    st.write(
+        "لن تحلي جميع أسئلة البنك. سيختار ScAI الأسئلة "
+        "وفق أدائكِ."
+    )
+
+    if st.button(
+        "ابدئي رحلة التعلم 🚀",
+        use_container_width=True
+    ):
+
         st.session_state.started = True
+        load_next_question()
         st.rerun()
 
-    show_mastery_map()
     st.stop()
 
-# =========================================================
-# إذا لم توجد أسئلة
-# =========================================================
-
-if not QUESTIONS:
-    st.error("لا توجد أسئلة في questions.py.")
-    st.stop()
 
 # =========================================================
-# انتهاء الرحلة
+# نهاية الجلسة
 # =========================================================
 
-if st.session_state.completed:
+if (
+    st.session_state.session_questions
+    >= st.session_state.max_session_questions
+):
 
-    st.success("🎉 أحسنتِ! اكتملت هذه الجولة التعليمية.")
+    st.success("🌷 أحسنتِ! انتهت جلسة التعلم الحالية.")
 
-    st.metric(
-        "عدد الإجابات الصحيحة",
-        st.session_state.score
-    )
+    st.markdown("## 🧠 خريطة إتقانكِ")
 
-    st.metric(
-        "عدد الأسئلة التي تمت معالجتها",
-        st.session_state.total_answered
-    )
+    for cid, data in st.session_state.mastery.items():
 
-    st.markdown("### 🧠 خريطة الإتقان النهائية")
+        if (
+            data["correct"] > 0
+            or data["wrong"] > 0
+        ):
 
-    for concept_id, data in st.session_state.mastery.items():
-        st.markdown(
-            f"""
-            <div class="mastery-box">
-            <b>{data['name']}</b><br>
-            {data['status']}<br>
-            صحيحة: {data['correct']} |
-            تحتاج مراجعة: {data['wrong']}
-            </div>
-            """,
-            unsafe_allow_html=True
+            st.write(
+                f"**{data['name']}** — "
+                f"{data['status']}"
+            )
+
+    if st.session_state.total_answered > 0:
+
+        percentage = round(
+            (
+                st.session_state.score
+                / st.session_state.total_answered
+            ) * 100
         )
 
-    if st.button("بدء جولة جديدة 🔄", use_container_width=True):
-        restart()
+        st.metric(
+            "نسبة الإجابات الصحيحة",
+            f"{percentage}%"
+        )
+
+    st.info(
+        "ستُستخدم هذه الخريطة لتحديد المفاهيم "
+        "التي تحتاج إلى مراجعة في الجلسة التالية."
+    )
+
+    if st.button(
+        "بدء جلسة جديدة 🔄",
+        use_container_width=True
+    ):
+
+        st.session_state.session_questions = 0
+        st.session_state.phase = "adaptive"
+        load_next_question()
         st.rerun()
 
     st.stop()
 
+
 # =========================================================
-# السؤال الحالي
+# تحميل سؤال إذا لم يوجد
 # =========================================================
 
-question = QUESTIONS[st.session_state.question_index]
+if st.session_state.current_question is None:
 
-cid = question.get("concept_id", "")
-concept_name = CONCEPTS.get(
-    cid,
-    question.get("concept", "مفهوم علمي")
-)
+    load_next_question()
+
+
+question = st.session_state.current_question
+cid = question["concept_id"]
+
+concept_name = CONCEPTS[cid]
+
 
 # =========================================================
 # شريط التقدم
 # =========================================================
 
-progress = (st.session_state.question_index + 1) / len(QUESTIONS)
+progress = (
+    st.session_state.session_questions
+    / st.session_state.max_session_questions
+)
 
 st.progress(min(progress, 1.0))
 
 st.caption(
     f"التقدم في جلسة اليوم: "
-    f"{st.session_state.question_index + 1} من {len(QUESTIONS)}"
+    f"{st.session_state.session_questions + 1} "
+    f"من {st.session_state.max_session_questions}"
 )
 
-status = st.session_state.mastery.get(
-    cid,
-    {"status": "⚪ لم يُقيَّم"}
-)["status"]
-
-st.caption(
-    f"المفهوم الحالي: {concept_name} | {status}"
-)
 
 # =========================================================
-# صندوق السؤال
+# المفهوم الحالي
 # =========================================================
+
+status = st.session_state.mastery[cid]["status"]
 
 st.markdown(
     f"""
-    <div class="question-box">
-    🌷 السؤال {st.session_state.question_index + 1}
-    <br><br>
-    {question.get('question', '')}
+    <div class="concept-card">
+    <b>المفهوم الحالي:</b>
+    {concept_name}
+    &nbsp; | &nbsp;
+    {status}
     </div>
     """,
     unsafe_allow_html=True
 )
 
+
 # =========================================================
-# صورة السؤال إن وجدت
+# السؤال
+# =========================================================
+
+st.markdown(
+    f"""
+    <div class="question-box">
+    <h3>🌷 السؤال</h3>
+    <h2>{question["question"]}</h2>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# الصورة
 # =========================================================
 
 if question.get("image"):
+
     try:
+
         st.image(
             question["image"],
             use_container_width=True
         )
+
     except Exception:
-        st.warning("تعذر عرض صورة هذا السؤال.")
+
+        st.caption(
+            "تعذر عرض الصورة المرتبطة بهذا السؤال."
+        )
+
 
 # =========================================================
-# الوضع العادي للسؤال
+# تحديد نوع السؤال
 # =========================================================
 
-if not st.session_state.equivalent_mode:
+question_type = question.get("type", "mcq")
 
-    question_type = question.get("type", "mcq")
+answer = None
 
-    # -------------------------
-    # اختيار من متعدد
-    # -------------------------
 
-    if question_type in ["mcq", "image_mcq"]:
+# =========================================================
+# اختيار من متعدد
+# =========================================================
 
-        answer = st.radio(
-            "اختاري إجابة واحدة:",
-            question.get("options", []),
-            index=None,
-            key=f"main_{question['id']}_{st.session_state.attempt}"
-        )
+if question_type in ["mcq", "image_mcq"]:
 
-    # -------------------------
-    # صح أو خطأ
-    # -------------------------
+    answer = st.radio(
+        "اختاري إجابة واحدة:",
+        question.get("options", []),
+        index=None,
+        key=f"answer_{question['id']}_{st.session_state.attempt}"
+    )
 
-    elif question_type == "true_false":
 
-        answer = st.radio(
-            "حددي صحة العبارة:",
-            ["صح", "خطأ"],
-            index=None,
-            horizontal=True,
-            key=f"tf_{question['id']}_{st.session_state.attempt}"
-        )
+# =========================================================
+# صح / خطأ
+# =========================================================
 
-    # -------------------------
-    # إجابة قصيرة
-    # -------------------------
+elif question_type == "true_false":
 
-    elif question_type == "short_answer":
+    answer = st.radio(
+        "حددي صحة العبارة:",
+        ["صح", "خطأ"],
+        index=None,
+        horizontal=True,
+        key=f"tf_{question['id']}_{st.session_state.attempt}"
+    )
 
-        answer = st.text_input(
-            "اكتبي إجابتك:",
-            key=f"short_{question['id']}_{st.session_state.attempt}"
-        )
 
-    # -------------------------
-    # ترتيب
-    # -------------------------
+# =========================================================
+# إجابة قصيرة
+# =========================================================
 
-    elif question_type == "sequence":
+elif question_type == "short_answer":
 
-        st.caption("اختاري الترتيب الصحيح:")
+    answer = st.text_input(
+        "اكتبي إجابتكِ:",
+        key=f"short_{question['id']}_{st.session_state.attempt}"
+    )
 
-        answer = st.radio(
-            "الترتيب:",
-            question.get("options", []),
-            index=None,
-            key=f"sequence_{question['id']}_{st.session_state.attempt}"
-        )
 
-    # -------------------------
-    # افتراضي
-    # -------------------------
+# =========================================================
+# ترتيب
+# =========================================================
 
-    else:
+elif question_type == "sequence":
 
-        answer = st.radio(
-            "اختاري إجابة واحدة:",
-            question.get("options", []),
-            index=None,
-            key=f"default_{question['id']}_{st.session_state.attempt}"
-        )
+    st.caption(
+        "اختاري الترتيب الصحيح للخطوات:"
+    )
 
-    # =====================================================
-    # زر التحقق
-    # =====================================================
+    answer = st.radio(
+        "الترتيب:",
+        question.get("options", []),
+        index=None,
+        key=f"sequence_{question['id']}_{st.session_state.attempt}"
+    )
+
+
+# =========================================================
+# تحليل رسم / موقف
+# =========================================================
+
+elif question_type in ["diagram", "application"]:
+
+    answer = st.radio(
+        "اختاري الإجابة الأنسب:",
+        question.get("options", []),
+        index=None,
+        key=f"diagram_{question['id']}_{st.session_state.attempt}"
+    )
+
+
+# =========================================================
+# نوع احتياطي
+# =========================================================
+
+else:
+
+    answer = st.radio(
+        "اختاري إجابة واحدة:",
+        question.get("options", []),
+        index=None,
+        key=f"default_{question['id']}_{st.session_state.attempt}"
+    )
+
+
+# =========================================================
+# فحص الإجابة
+# =========================================================
+
+if not st.session_state.answered:
 
     if st.button(
         "تحققي من إجابتي",
@@ -526,63 +640,133 @@ if not st.session_state.equivalent_mode:
     ):
 
         if answer is None or str(answer).strip() == "":
-            st.warning("اختاري أو اكتبي إجابة أولًا.")
 
-        elif is_correct_answer(question, answer):
-
-            st.session_state.feedback = "correct"
-            st.session_state.score += 1
-            st.session_state.total_answered += 1
-
-            update_mastery(cid, True)
-
-            if question["id"] not in st.session_state.seen:
-                st.session_state.seen.append(question["id"])
-
-            if (
-                st.session_state.phase == "diagnostic"
-                and cid not in st.session_state.diagnostic_done
-            ):
-                st.session_state.diagnostic_done.append(cid)
-
-            st.session_state.answered = True
-            st.rerun()
+            st.warning("اختاري أو اكتبي إجابة أولاً.")
 
         else:
 
-            st.session_state.attempt += 1
+            # ---------------------------------------------
+            # مقارنة الإجابة
+            # ---------------------------------------------
 
-            if st.session_state.attempt == 1:
+            correct_answer = str(
+                question["answer"]
+            ).strip()
+
+            student_answer = str(answer).strip()
+
+            correct = (
+                student_answer.lower()
+                == correct_answer.lower()
+            )
+
+
+            # ---------------------------------------------
+            # صحيحة
+            # ---------------------------------------------
+
+            if correct:
+
+                st.session_state.feedback = "correct"
+
+                st.session_state.score += 1
                 st.session_state.total_answered += 1
-                update_mastery(cid, False)
-                st.session_state.hint_level = 1
 
-            elif st.session_state.attempt == 2:
-                st.session_state.hint_level = 2
+                update_mastery(cid, True)
+
+                log_response(
+                    question,
+                    answer,
+                    True
+                )
+
+                if question["id"] not in st.session_state.seen:
+                    st.session_state.seen.append(
+                        question["id"]
+                    )
+
+                if (
+                    st.session_state.phase == "diagnostic"
+                    and cid not in st.session_state.diagnostic_done
+                ):
+
+                    st.session_state.diagnostic_done.append(
+                        cid
+                    )
+
+                st.session_state.answered = True
+
+                st.rerun()
+
+
+            # ---------------------------------------------
+            # غير صحيحة
+            # ---------------------------------------------
 
             else:
-                st.session_state.show_lesson = True
 
-            st.rerun()
+                st.session_state.attempt += 1
+
+                # نسجل الخطأ مرة واحدة فقط
+                if st.session_state.attempt == 1:
+
+                    st.session_state.total_answered += 1
+
+                    update_mastery(
+                        cid,
+                        False
+                    )
+
+                    log_response(
+                        question,
+                        answer,
+                        False
+                    )
+
+                # التلميح الأول
+                if st.session_state.attempt == 1:
+
+                    st.session_state.hint_level = 1
+
+                # التلميح الثاني
+                elif st.session_state.attempt == 2:
+
+                    st.session_state.hint_level = 2
+
+                # بعد المحاولتين تظهر المراجعة
+                else:
+
+                    st.session_state.show_lesson = True
+
+                st.rerun()
+
 
 # =========================================================
-# تغذية راجعة للإجابة الصحيحة
+# التغذية الراجعة الصحيحة
 # =========================================================
 
-if (
-    st.session_state.feedback == "correct"
-    and not st.session_state.equivalent_mode
-):
+if st.session_state.feedback == "correct":
 
-    st.success("🌟 إجابة صحيحة، أحسنتِ!")
+    st.markdown(
+        """
+        <div class="correct-box">
+        🌟 إجابة صحيحة. أحسنتِ!
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     if st.button(
         "السؤال التالي ➜",
-        use_container_width=True,
-        key="next_after_correct"
+        use_container_width=True
     ):
-        move_next()
+
+        st.session_state.session_questions += 1
+
+        load_next_question()
+
         st.rerun()
+
 
 # =========================================================
 # التلميح الأول
@@ -590,17 +774,19 @@ if (
 
 if (
     st.session_state.hint_level >= 1
-    and not st.session_state.answered
-    and not st.session_state.equivalent_mode
+    and not st.session_state.show_lesson
 ):
 
-    hint1 = question.get("hint1", "")
+    st.markdown(
+        f"""
+        <div class="hint-box">
+        💡 <b>التلميح الأول:</b><br><br>
+        {question.get("hint1", "")}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if hint1:
-        st.info(
-            "💡 **التلميح الأول:**\n\n"
-            + hint1
-        )
 
 # =========================================================
 # التلميح الثاني
@@ -608,49 +794,55 @@ if (
 
 if (
     st.session_state.hint_level >= 2
-    and not st.session_state.answered
-    and not st.session_state.equivalent_mode
+    and not st.session_state.show_lesson
 ):
 
-    hint2 = question.get("hint2", "")
-
-    if hint2:
-        st.info(
-            "💡 **التلميح الثاني:**\n\n"
-            + hint2
-        )
-
-# =========================================================
-# المراجعة المصغرة
-# =========================================================
-
-if (
-    st.session_state.show_lesson
-    and not st.session_state.equivalent_mode
-):
-
-    st.warning(
-        "سنراجع الفكرة سريعًا ثم نجرب سؤالًا مكافئًا."
+    st.markdown(
+        f"""
+        <div class="hint-box">
+        💡 <b>التلميح الثاني:</b><br><br>
+        {question.get("hint2", "")}
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    st.markdown("## 📘 مراجعة سريعة")
+
+# =========================================================
+# المراجعة العلاجية
+# =========================================================
+
+if st.session_state.show_lesson:
 
     lesson = question.get(
         "micro_lesson",
         question.get("lesson", "")
     )
 
-    if lesson:
-        st.info(lesson)
+    st.markdown(
+        f"""
+        <div class="lesson-box">
+        📘 <b>مراجعة سريعة</b>
+        <br><br>
+        {lesson}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "بعد المراجعة سيختبر ScAI الفكرة مرة أخرى."
+    )
 
     if st.button(
-        "فهمت، اختبريني بسؤال آخر",
-        use_container_width=True,
-        key=f"equiv_start_{question['id']}"
+        "فهمتُ، اختبريني بسؤال مكافئ 🧠",
+        use_container_width=True
     ):
+
         st.session_state.equivalent_mode = True
-        st.session_state.feedback = ""
+        st.session_state.show_lesson = False
         st.rerun()
+
 
 # =========================================================
 # السؤال المكافئ
@@ -658,62 +850,24 @@ if (
 
 if st.session_state.equivalent_mode:
 
-    st.markdown("### 🔄 سؤال للتأكد من الفهم")
+    st.markdown("---")
 
-    equivalent = question.get(
+    st.markdown("### 🧠 سؤال مكافئ")
+
+    equivalent_question = question.get(
         "equivalent",
-        question.get("question", "")
+        question["question"]
     )
 
-    st.markdown(
-        f"""
-        <div class="question-box">
-        {equivalent}
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.write(equivalent_question)
+
+    # يستخدم نفس الاختيارات مؤقتاً
+    equivalent_answer = st.radio(
+        "اختاري إجابتكِ:",
+        question.get("options", []),
+        index=None,
+        key=f"equiv_{question['id']}"
     )
-
-    # إذا كان لدينا خيارات مكافئة مستقلة نستخدمها،
-    # وإلا نستخدم خيارات السؤال الأصلي.
-
-    equivalent_options = question.get(
-        "equivalent_options",
-        question.get("options", [])
-    )
-
-    equivalent_answer = question.get(
-        "equivalent_answer",
-        question.get("answer", "")
-    )
-
-    question_type = question.get("type", "mcq")
-
-    if question_type == "short_answer":
-
-        eq_answer = st.text_input(
-            "اكتبي إجابتك:",
-            key=f"equiv_short_{question['id']}"
-        )
-
-    elif question_type == "true_false":
-
-        eq_answer = st.radio(
-            "حددي صحة العبارة:",
-            ["صح", "خطأ"],
-            index=None,
-            horizontal=True,
-            key=f"equiv_tf_{question['id']}"
-        )
-
-    else:
-
-        eq_answer = st.radio(
-            "اختاري إجابة واحدة:",
-            equivalent_options,
-            index=None,
-            key=f"equiv_{question['id']}"
-        )
 
     if st.button(
         "تحققي من السؤال المكافئ",
@@ -721,46 +875,40 @@ if st.session_state.equivalent_mode:
         key=f"check_equiv_{question['id']}"
     ):
 
-        if eq_answer is None or str(eq_answer).strip() == "":
-            st.warning("أجيبي أولًا.")
+        if equivalent_answer is None:
+
+            st.warning("اختاري إجابة أولاً.")
+
+        elif (
+            str(equivalent_answer).strip().lower()
+            ==
+            str(question["answer"]).strip().lower()
+        ):
+
+            update_mastery(
+                cid,
+                True
+            )
+
+            st.session_state.feedback = "equivalent_correct"
+
+            st.session_state.answered = True
+
+            st.rerun()
 
         else:
 
-            if question_type == "short_answer":
+            update_mastery(
+                cid,
+                False
+            )
 
-                temp_question = dict(question)
-                temp_question["answer"] = equivalent_answer
+            st.session_state.feedback = "equivalent_wrong"
 
-                if question.get("equivalent_accepted_answers"):
-                    temp_question["accepted_answers"] = (
-                        question["equivalent_accepted_answers"]
-                    )
+            st.session_state.answered = True
 
-                correct_equivalent = is_correct_answer(
-                    temp_question,
-                    eq_answer
-                )
+            st.rerun()
 
-            else:
-                correct_equivalent = (
-                    str(eq_answer).strip()
-                    == str(equivalent_answer).strip()
-                )
-
-            if correct_equivalent:
-
-                update_mastery(cid, True)
-
-                st.session_state.feedback = "equivalent_correct"
-                st.session_state.answered = True
-                st.rerun()
-
-            else:
-
-                update_mastery(cid, False)
-
-                st.session_state.feedback = "equivalent_wrong"
-                st.rerun()
 
 # =========================================================
 # نتيجة السؤال المكافئ
@@ -769,45 +917,51 @@ if st.session_state.equivalent_mode:
 if st.session_state.feedback == "equivalent_correct":
 
     st.success(
-        "🌟 ممتاز! الآن أظهرتِ فهمًا أفضل للمفهوم."
+        "🌟 ممتاز! يبدو أنكِ فهمتِ الفكرة الآن."
     )
 
     if st.button(
         "متابعة التعلم ➜",
         use_container_width=True,
-        key="continue_after_equiv_correct"
+        key="continue_equiv_correct"
     ):
-        move_next()
+
+        st.session_state.session_questions += 1
+
+        load_next_question()
+
         st.rerun()
 
 
 elif st.session_state.feedback == "equivalent_wrong":
 
-    st.error(
-        "هذا المفهوم ما زال يحتاج إلى دعم. "
-        "سنعود إليه مرة أخرى أثناء التعلم."
+    st.warning(
+        "لا بأس. سيعيد ScAI هذا المفهوم لاحقاً "
+        "بطريقة مختلفة."
     )
 
     if st.button(
         "متابعة التعلم ➜",
         use_container_width=True,
-        key="continue_after_equiv_wrong"
+        key="continue_equiv_wrong"
     ):
-        move_next()
+
+        st.session_state.session_questions += 1
+
+        load_next_question()
+
         st.rerun()
+
 
 # =========================================================
 # خريطة الإتقان
 # =========================================================
 
-show_mastery_map()
+with st.expander("🧠 خريطة إتقاني"):
 
-# =========================================================
-# تنبيه منهجي
-# =========================================================
+    for cid, data in st.session_state.mastery.items():
 
-st.caption(
-    "ScAI يستخدم المحتوى التعليمي المعتمد للدراسة، "
-    "وتُستخدم الاستجابات لتكييف مسار التعلم دون الحاجة "
-    "إلى إدخال الاسم أو البيانات الشخصية."
-)
+        st.write(
+            f"**{data['name']}** — "
+            f"{data['status']}"
+        )
