@@ -369,11 +369,52 @@ if question.get("image"):
 # =========================================================
 if not st.session_state.equivalent_mode:
 
+ # ==========================================
+# عرض السؤال حسب نوع النشاط
+# ==========================================
+
+question_type = question.get("type", "mcq")
+
+# عرض صورة السؤال إن وجدت
+if question.get("image"):
+    st.image(
+        question["image"],
+        use_container_width=True
+    )
+
+# 1) اختيار من متعدد
+if question_type in ["mcq", "image_mcq"]:
     answer = st.radio(
         "اختاري إجابة واحدة:",
         question["options"],
         index=None,
         key=f"main_{question['id']}_{st.session_state.attempt}"
+    )
+
+# 2) صح أو خطأ
+elif question_type == "true_false":
+    answer = st.radio(
+        "حددي صحة العبارة:",
+        ["صح", "خطأ"],
+        index=None,
+        horizontal=True,
+        key=f"tf_{question['id']}_{st.session_state.attempt}"
+    )
+
+# 3) إجابة قصيرة
+elif question_type == "short_answer":
+    answer = st.text_input(
+        "اكتبي إجابتك:",
+        key=f"short_{question['id']}_{st.session_state.attempt}"
+    )
+
+# احتياطًا لأي نوع غير معروف
+else:
+    answer = st.radio(
+        "اختاري إجابة واحدة:",
+        question.get("options", []),
+        index=None,
+        key=f"default_{question['id']}_{st.session_state.attempt}"
     )
 
     if st.button(
