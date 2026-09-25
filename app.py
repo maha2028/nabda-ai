@@ -95,16 +95,19 @@ for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# إنشاء سجل لكل مفهوم
+# إنشاء/إصلاح سجل كل مفهوم
 for cid, cname in CONCEPTS.items():
-    if cid not in st.session_state.mastery:
-        st.session_state.mastery[cid] = {
-            "name": cname,
-            "correct": 0,
-            "wrong": 0,
-            "status": "⚪ لم يُقَيَّم"
-        }
+    old = st.session_state.mastery.get(cid, {})
 
+    if not isinstance(old, dict):
+        old = {}
+
+    st.session_state.mastery[cid] = {
+        "name": cname,
+        "correct": old.get("correct", 0),
+        "wrong": old.get("wrong", 0),
+        "status": old.get("status", "⚪ لم يُقَيَّم")
+    }
 # =========================================================
 # وظائف
 # =========================================================
