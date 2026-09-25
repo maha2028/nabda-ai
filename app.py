@@ -367,64 +367,81 @@ if question.get("image"):
 # =========================================================
 # الوضع العادي
 # =========================================================
-if not st.session_state.equivalent_mode:
 
- # ==========================================
-# عرض السؤال حسب نوع النشاط
-# ==========================================
 
-question_type = question.get("type", "mcq")
 
-# عرض صورة السؤال إن وجدت
-if question.get("image"):
-    st.image(
-        question["image"],
-        use_container_width=True
-    )
 
-# 1) اختيار من متعدد
-if question_type in ["mcq", "image_mcq"]:
-    answer = st.radio(
-        "اختاري إجابة واحدة:",
-        question["options"],
-        index=None,
-        key=f"main_{question['id']}_{st.session_state.attempt}"
-    )
 
-# 2) صح أو خطأ
-elif question_type == "true_false":
-    answer = st.radio(
-        "حددي صحة العبارة:",
-        ["صح", "خطأ"],
-        index=None,
-        horizontal=True,
-        key=f"tf_{question['id']}_{st.session_state.attempt}"
-    )
 
-# 3) إجابة قصيرة
-elif question_type == "short_answer":
-    answer = st.text_input(
-        "اكتبي إجابتك:",
-        key=f"short_{question['id']}_{st.session_state.attempt}"
-    )
+    if not st.session_state.equivalent_mode:
 
-# احتياطًا لأي نوع غير معروف
-else:
-    answer = st.radio(
-        "اختاري إجابة واحدة:",
-        question.get("options", []),
-        index=None,
-        key=f"default_{question['id']}_{st.session_state.attempt}"
-    )
+    # تحديد نوع السؤال
+    question_type = question.get("type", "mcq")
 
+    # عرض صورة السؤال إن وجدت
+    if question.get("image"):
+        try:
+            st.image(
+                question["image"],
+                use_container_width=True
+            )
+        except Exception:
+            pass
+
+    # =========================
+    # اختيار من متعدد / سؤال بصورة
+    # =========================
+    if question_type in ["mcq", "image_mcq"]:
+        answer = st.radio(
+            "اختاري إجابة واحدة:",
+            question.get("options", []),
+            index=None,
+            key=f"main_{question['id']}_{st.session_state.attempt}"
+        )
+
+    # =========================
+    # صح أو خطأ
+    # =========================
+    elif question_type == "true_false":
+        answer = st.radio(
+            "حددي صحة العبارة:",
+            ["صح", "خطأ"],
+            index=None,
+            horizontal=True,
+            key=f"tf_{question['id']}_{st.session_state.attempt}"
+        )
+
+    # =========================
+    # إجابة قصيرة
+    # =========================
+    elif question_type == "short_answer":
+        answer = st.text_input(
+            "اكتبي إجابتك:",
+            key=f"short_{question['id']}_{st.session_state.attempt}"
+        )
+
+    # =========================
+    # أي نوع آخر
+    # =========================
+    else:
+        answer = st.radio(
+            "اختاري إجابة واحدة:",
+            question.get("options", []),
+            index=None,
+            key=f"default_{question['id']}_{st.session_state.attempt}"
+        )
+
+    # =========================
+    # زر التحقق
+    # =========================
     if st.button(
         "تحققي من إجابتي",
         use_container_width=True,
         key=f"check_{question['id']}_{st.session_state.attempt}"
     ):
 
-        if answer is None:
-            st.warning("اختاري إجابة أولًا.")
+        if answer is None or answer == "":
+            st.warning("اختاري أو اكتبي إجابة أولًا.")
 
         elif answer == question["answer"]:
 
@@ -465,7 +482,6 @@ else:
                 st.session_state.show_lesson = True
 
             st.rerun()
-
     # -----------------------------------------
     # التلميح الأول
     # -----------------------------------------
