@@ -373,7 +373,7 @@ if question.get("image"):
 
 
 
-    if not st.session_state.equivalent_mode:
+   if not st.session_state.equivalent_mode:
 
     # تحديد نوع السؤال
     question_type = question.get("type", "mcq")
@@ -387,101 +387,6 @@ if question.get("image"):
             )
         except Exception:
             pass
-
-    # =========================
-    # اختيار من متعدد / سؤال بصورة
-    # =========================
-    if question_type in ["mcq", "image_mcq"]:
-        answer = st.radio(
-            "اختاري إجابة واحدة:",
-            question.get("options", []),
-            index=None,
-            key=f"main_{question['id']}_{st.session_state.attempt}"
-        )
-
-    # =========================
-    # صح أو خطأ
-    # =========================
-    elif question_type == "true_false":
-        answer = st.radio(
-            "حددي صحة العبارة:",
-            ["صح", "خطأ"],
-            index=None,
-            horizontal=True,
-            key=f"tf_{question['id']}_{st.session_state.attempt}"
-        )
-
-    # =========================
-    # إجابة قصيرة
-    # =========================
-    elif question_type == "short_answer":
-        answer = st.text_input(
-            "اكتبي إجابتك:",
-            key=f"short_{question['id']}_{st.session_state.attempt}"
-        )
-
-    # =========================
-    # أي نوع آخر
-    # =========================
-    else:
-        answer = st.radio(
-            "اختاري إجابة واحدة:",
-            question.get("options", []),
-            index=None,
-            key=f"default_{question['id']}_{st.session_state.attempt}"
-        )
-
-    # =========================
-    # زر التحقق
-    # =========================
-    if st.button(
-        "تحققي من إجابتي",
-        use_container_width=True,
-        key=f"check_{question['id']}_{st.session_state.attempt}"
-    ):
-
-        if answer is None or answer == "":
-            st.warning("اختاري أو اكتبي إجابة أولًا.")
-
-        elif answer == question["answer"]:
-
-            st.session_state.feedback = "correct"
-            st.session_state.score += 1
-            st.session_state.total_answered += 1
-
-            update_mastery(cid, True)
-
-            if question["id"] not in st.session_state.seen:
-                st.session_state.seen.append(question["id"])
-
-            if (
-                st.session_state.phase == "diagnostic"
-                and cid not in st.session_state.diagnostic_done
-            ):
-                st.session_state.diagnostic_done.append(cid)
-
-            st.session_state.answered = True
-            st.rerun()
-
-        else:
-
-            st.session_state.attempt += 1
-
-            # لا نسجل الخطأ إلا مرة واحدة لكل سؤال
-            if st.session_state.attempt == 1:
-                st.session_state.total_answered += 1
-                update_mastery(cid, False)
-
-            if st.session_state.attempt == 1:
-                st.session_state.hint_level = 1
-
-            elif st.session_state.attempt == 2:
-                st.session_state.hint_level = 2
-
-            else:
-                st.session_state.show_lesson = True
-
-            st.rerun()
     # -----------------------------------------
     # التلميح الأول
     # -----------------------------------------
