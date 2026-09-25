@@ -1,18 +1,71 @@
 import streamlit as st
 from questions import QUESTIONS, CONCEPTS
+
 # =========================================================
-# إعداد الصفحة
+# ScAI - مساعد التعلم الذكي التكيفي للعلوم
 # =========================================================
 
 st.set_page_config(
-    page_title="نبضة AI",
-    page_icon="❤️",
+    page_title="ScAI",
+    page_icon="🔬",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
 # =========================================================
-# إعداد حالة الجلسة
+# تنسيق الواجهة
+# =========================================================
+
+st.markdown("""
+<style>
+    .stApp {
+        direction: rtl;
+        text-align: right;
+        background: linear-gradient(180deg, #fffafd 0%, #f7f9ff 100%);
+    }
+
+    h1, h2, h3, p, div, label {
+        direction: rtl;
+        text-align: right;
+    }
+
+    .main-title {
+        text-align: center;
+        font-size: 54px;
+        font-weight: 800;
+        color: #d94b70;
+        margin-bottom: 0;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #596275;
+        font-size: 20px;
+        margin-bottom: 25px;
+    }
+
+    .question-box {
+        padding: 22px;
+        border: 1px solid #e4dce3;
+        border-radius: 15px;
+        background: white;
+        margin: 15px 0;
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .mastery-box {
+        padding: 12px;
+        border-radius: 12px;
+        background: white;
+        border: 1px solid #ececec;
+        margin-bottom: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================================
+# حالة الجلسة
 # =========================================================
 
 defaults = {
@@ -23,576 +76,435 @@ defaults = {
     "score": 0,
     "feedback": "",
     "hint_level": 0,
+    "show_lesson": False,
+    "equivalent_mode": False,
     "completed": False,
-    "mastery": {
-        "مكونات الدم": 0,
-        "خلايا الدم الحمراء": 0,
-        "الدورة الدموية": 0
-    }
+    "mastery": {},
+    "answered": False
 }
 
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+# إنشاء خريطة إتقان لكل المفاهيم
+for concept_id, concept_name in CONCEPTS.items():
+    if concept_name not in st.session_state.mastery:
+        st.session_state.mastery[concept_name] = {
+            "correct": 0,
+            "wrong": 0,
+            "status": "⚪ لم يُقَيَّم"
+        }
 
 # =========================================================
-# بنك الأسئلة التجريبي
+# وظائف مساعدة
 # =========================================================
 
-questions = [
+def reset_question_state():
+    st.session_state.attempt = 0
+    st.session_state.feedback = ""
+    st.session_state.hint_level = 0
+    st.session_state.show_lesson = False
+    st.session_state.equivalent_mode = False
+    st.session_state.answered = False
 
-    {
-        "id": "C02-Q01",
-        "concept": "مكونات الدم",
 
-        "question":
-            "أيُّ مكوّن من مكوّنات الدم يساعد بصورة أساسية "
-            "على تجلط الدم عند حدوث جرح؟",
+def update_mastery(concept, correct):
+    data = st.session_state.mastery[concept]
 
-        "options": [
-            "خلايا الدم الحمراء",
-            "خلايا الدم البيضاء",
-            "الصفائح الدموية",
-            "البلازما"
-        ],
+    if correct:
+        data["correct"] += 1
+    else:
+        data["wrong"] += 1
 
-        "answer": "الصفائح الدموية",
+    c = data["correct"]
+    w = data["wrong"]
 
-        "hint1":
-            "فكري في المكوّن الذي يساعد الجسم على إيقاف "
-            "النزيف بعد حدوث الجرح.",
+    if c >= 2 and w == 0:
+        data["status"] = "🟢 متقن"
+    elif c >= 1:
+        data["status"] = "🟡 في طور الإتقان"
+    else:
+        data["status"] = "🔴 يحتاج دعمًا"
 
-        "hint2":
-            "خلايا الدم البيضاء ترتبط بالدفاع عن الجسم، "
-            "أما المطلوب هنا فهو مكوّن يشارك في تكوين الخثرة.",
 
-        "lesson":
-            "عند حدوث جرح، تشارك الصفائح الدموية في عملية "
-            "تجلط الدم، مما يساعد على تقليل فقدان الدم.",
+def next_question():
+    st.session_state.question_index += 1
+    reset_question_state()
 
-        "equivalent":
-            "تعرضت طالبة لجرح صغير في يدها، فما مكوّن الدم "
-            "الذي يؤدي دورًا مهمًا في إيقاف النزيف؟"
-    },
+    if st.session_state.question_index >= len(QUESTIONS):
+        st.session_state.completed = True
 
-    {
-        "id": "C03-Q01",
-        "concept": "خلايا الدم الحمراء",
 
-        "question":
-            "ما الوظيفة الأساسية لخلايا الدم الحمراء؟",
+def restart_session():
+    st.session_state.started = False
+    st.session_state.question_index = 0
+    st.session_state.score = 0
+    st.session_state.completed = False
+    reset_question_state()
 
-        "options": [
-            "الدفاع عن الجسم",
-            "المساعدة على تجلط الدم",
-            "نقل الأكسجين",
-            "إنتاج الأجسام المضادة"
-        ],
 
-        "answer": "نقل الأكسجين",
-
-        "hint1":
-            "فكري في المادة التي تحتاج إليها خلايا الجسم "
-            "لإطلاق الطاقة.",
-
-        "hint2":
-            "تحتوي خلايا الدم الحمراء على الهيموجلوبين، "
-            "وهو يرتبط بأحد الغازات المهمة للجسم.",
-
-        "lesson":
-            "تحتوي خلايا الدم الحمراء على الهيموجلوبين، "
-            "وتؤدي دورًا أساسيًا في نقل الأكسجين.",
-
-        "equivalent":
-            "أي مكوّن من مكونات الدم ينقل الأكسجين "
-            "إلى خلايا الجسم؟"
-    },
-
-    {
-        "id": "C08-Q01",
-        "concept": "الدورة الدموية",
-
-        "question":
-            "أي دورة دموية ينتقل فيها الدم من القلب "
-            "إلى الرئتين ثم يعود إلى القلب؟",
-
-        "options": [
-            "الدورة الجسمية",
-            "الدورة الرئوية",
-            "الدورة القلبية",
-            "الدورة اللمفية"
-        ],
-
-        "answer": "الدورة الرئوية",
-
-        "hint1":
-            "ركزي على العضو الذي ينتقل إليه الدم "
-            "في السؤال.",
-
-        "hint2":
-            "اسم هذه الدورة مرتبط بالرئتين مباشرة.",
-
-        "lesson":
-            "في الدورة الرئوية ينتقل الدم من القلب إلى "
-            "الرئتين، حيث يحدث تبادل الغازات، ثم يعود إلى القلب.",
-
-        "equivalent":
-            "ما اسم الدورة التي يذهب فيها الدم إلى الرئتين "
-            "للتخلص من ثاني أكسيد الكربون والحصول على الأكسجين؟"
-    }
-]
-
-questions = QUESTIONS
-# توحيد حقول بنك الأسئلة الجديد مع المحرك الحالي
-for q in questions:
-    if "lesson" not in q:
-        q["lesson"] = q.get("micro_lesson", "")
-
-    if "micro_lesson" in q:
-        q["lesson"] = q["micro_lesson"]
-
-    if "equivalent" not in q:
-        q["equivalent"] = q["question"]
 # =========================================================
-# التنسيق
+# رأس التطبيق
 # =========================================================
 
+st.markdown('<div class="main-title">ScAI 🔬</div>', unsafe_allow_html=True)
 st.markdown(
-    """
-    <style>
-
-    .stApp {
-        direction: rtl;
-        background: linear-gradient(
-            135deg,
-            #fff8fa 0%,
-            #f7f9ff 100%
-        );
-    }
-
-    .block-container {
-        max-width: 800px;
-        padding-top: 2rem;
-        padding-bottom: 4rem;
-    }
-
-    h1, h2, h3, h4, p, label {
-        direction: rtl;
-        text-align: right;
-    }
-
-    div.stButton > button {
-        width: 100%;
-        min-height: 52px;
-        border-radius: 14px;
-        font-size: 17px;
-        font-weight: 700;
-    }
-
-    </style>
-    """,
+    '<div class="subtitle">مساعدكِ الذكي التكيفي لتعلّم العلوم</div>',
     unsafe_allow_html=True
 )
 
-
 # =========================================================
-# الشعار
-# =========================================================
-
-st.markdown(
-    "<h1 style='text-align:center;color:#d94b68;'>❤️ نبضة AI</h1>",
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <p style='text-align:center;
-    color:#64748b;
-    font-size:18px;'>
-    مساعدتك الذكية التكيفية في مادة العلوم
-    </p>
-    """,
-    unsafe_allow_html=True
-)
-
-st.write("")
-
-
-# =========================================================
-# شاشة الدخول
+# تسجيل الدخول
 # =========================================================
 
 if not st.session_state.logged_in:
 
-    with st.container(border=True):
-
-        st.markdown("## 🌷 مرحبًا بكِ")
-
-        st.write(
-            "هذه البيئة التعليمية مخصصة للمشاركات "
-            "المصرح لهن في الدراسة."
-        )
-
-    access_code = st.text_input(
-        "رمز الدخول الخاص بكِ",
-        type="password",
-        placeholder="أدخلي رمز الدخول"
+    st.info(
+        "مرحبًا بكِ في ScAI. هذه البيئة مخصصة للمشاركات "
+        "المصرح لهن في الدراسة."
     )
 
-    if st.button(
-        "دخول إلى نبضة ❤️",
-        type="primary"
-    ):
+    code = st.text_input(
+        "أدخلي رمز الدخول البحثي",
+        type="password",
+        placeholder="رمز الدخول"
+    )
 
-        if access_code.strip():
+    st.caption("لا تكتبي اسمكِ أو أي بيانات شخصية.")
 
+    if st.button("دخول إلى ScAI", use_container_width=True):
+        # مؤقت للاختبار فقط - سنستبدله لاحقًا برموز آمنة
+        if code.strip():
             st.session_state.logged_in = True
             st.rerun()
-
         else:
+            st.error("يرجى إدخال رمز الدخول.")
 
-            st.warning(
-                "يرجى إدخال رمز الدخول."
-            )
-
-    st.caption(
-        "🔒 لا تكتبي اسمكِ أو أي بيانات شخصية."
-    )
-
+    st.stop()
 
 # =========================================================
 # شاشة البداية
 # =========================================================
 
-elif not st.session_state.started:
+if not st.session_state.started:
 
-    st.success(
-        "🌷 أهلًا بكِ في جلسة اليوم"
-    )
+    st.success("تم تسجيل الدخول بنجاح 🌷")
 
-    st.write(
-        "ستقدم لكِ نبضة أسئلة تتغير المساعدة فيها "
-        "وفق إجاباتكِ ومحاولاتكِ."
-    )
+    st.markdown("""
+    ### كيف يعمل ScAI؟
 
-    with st.container(border=True):
+    سيقدم لكِ ScAI مجموعة من الأسئلة في العلوم.
 
-        st.markdown(
-            "### 🫀 جهازا الدوران والمناعة"
-        )
+    إذا كانت إجابتكِ صحيحة فسيتقدم بكِ في التعلم.
 
-        st.write(
-            "اقرئي كل سؤال جيدًا ثم اختاري الإجابة."
-        )
+    وإذا احتجتِ إلى مساعدة، سيقدم لكِ تلميحات تدريجية
+    وشرحًا قصيرًا ثم يتحقق من فهمكِ مرة أخرى.
+    """)
 
-        st.write(
-            "إذا كانت الإجابة غير صحيحة، "
-            "ستساعدكِ نبضة تدريجيًا دون إعطائكِ "
-            "الإجابة مباشرة."
-        )
-
-    st.progress(0)
-
-    st.caption(
-        "التقدم في جلسة اليوم: 0%"
-    )
-
-    if st.button(
-        "ابدئي جلسة اليوم ←",
-        type="primary"
-    ):
-
+    if st.button("ابدئي جلسة التعلّم 🚀", use_container_width=True):
         st.session_state.started = True
         st.rerun()
 
+    st.stop()
 
 # =========================================================
-# انتهاء الجلسة
+# نهاية الجلسة
 # =========================================================
 
-elif st.session_state.completed:
+if st.session_state.completed:
 
     st.balloons()
 
-    st.success(
-        "🌟 أحسنتِ! أنهيتِ جلسة نبضة."
+    st.success("أحسنتِ 🌟 لقد أكملتِ جلسة ScAI.")
+
+    st.metric(
+        "عدد الإجابات الصحيحة",
+        f"{st.session_state.score} من {len(QUESTIONS)}"
     )
 
-    st.markdown(
-        "### 📊 خريطة تعلمكِ الأولية"
-    )
+    st.subheader("🧠 خريطة تعلّمكِ")
 
-    for concept, level in st.session_state.mastery.items():
+    for concept_id, concept_name in CONCEPTS.items():
+        data = st.session_state.mastery[concept_name]
 
-        if level >= 2:
-
-            symbol = "🟢"
-            text = "أداء جيد"
-
-        elif level == 1:
-
-            symbol = "🟡"
-            text = "يحتاج إلى تعزيز"
-
-        else:
-
-            symbol = "🔴"
-            text = "يحتاج إلى دعم"
-
-        st.write(
-            f"{symbol} **{concept}:** {text}"
+        st.markdown(
+            f"""
+            <div class="mastery-box">
+            <b>{concept_name}</b><br>
+            {data["status"]}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-    st.info(
-        "هذه الخريطة لا تمثل درجة نهائية، "
-        "وإنما تساعد نبضة على اختيار ما تحتاجين "
-        "إلى مراجعته لاحقًا."
-    )
-
-    if st.button(
-        "إنهاء الجلسة ❤️"
-    ):
-
-        st.session_state.started = False
-        st.session_state.completed = False
-        st.session_state.question_index = 0
-        st.session_state.attempt = 0
-        st.session_state.hint_level = 0
-
+    if st.button("بدء جلسة جديدة"):
+        restart_session()
         st.rerun()
 
+    st.stop()
 
 # =========================================================
-# الأسئلة
+# السؤال الحالي
 # =========================================================
 
-else:
+index = st.session_state.question_index
+question = QUESTIONS[index]
+concept = question["concept"]
 
-    index = st.session_state.question_index
+progress = index / len(QUESTIONS)
 
-    question = questions[index]
+st.progress(progress)
 
-    progress = int(
-        ((index + 1) / len(questions)) * 100
+st.caption(
+    f"التقدم في جلسة اليوم: "
+    f"{index + 1} من {len(QUESTIONS)}"
+)
+
+st.caption(
+    f"المفهوم الحالي: {concept} | "
+    f"{st.session_state.mastery[concept]['status']}"
+)
+
+# صورة السؤال إذا أضيفت لاحقًا
+if question.get("image"):
+    try:
+        st.image(question["image"], use_container_width=True)
+    except Exception:
+        pass
+
+# =========================================================
+# السؤال الأساسي
+# =========================================================
+
+if not st.session_state.equivalent_mode:
+
+    st.markdown(
+        f"""
+        <div class="question-box">
+        🌷 السؤال {index + 1}<br><br>
+        {question["question"]}
+        </div>
+        """,
+        unsafe_allow_html=True
     )
-
-    st.progress(
-        (index + 1) / len(questions)
-    )
-
-    st.caption(
-        f"التقدم في جلسة اليوم: {progress}%"
-    )
-
-    with st.container(border=True):
-
-        st.markdown(
-            f"#### 🌷 السؤال {index + 1}"
-        )
-
-        st.markdown(
-            f"### {question['question']}"
-        )
-
-    # -----------------------------------------------------
-    # الاختيارات
-    # -----------------------------------------------------
 
     answer = st.radio(
         "اختاري إجابة واحدة:",
         question["options"],
         index=None,
-        key=f"answer_{index}_{st.session_state.attempt}"
+        key=f"main_{question['id']}_{st.session_state.attempt}"
     )
-
-    # -----------------------------------------------------
-    # زر التحقق
-    # -----------------------------------------------------
 
     if st.button(
         "تحققي من إجابتي",
-        type="primary",
-        key=f"check_{index}_{st.session_state.attempt}"
+        use_container_width=True,
+        key=f"check_{question['id']}"
     ):
 
         if answer is None:
-
-            st.warning(
-                "اختاري إجابة أولًا 🌷"
-            )
+            st.warning("اختاري إجابة أولًا.")
 
         elif answer == question["answer"]:
 
-            st.success(
-                "🌟 إجابة صحيحة!"
+            st.session_state.score += 1
+            update_mastery(concept, True)
+
+            st.session_state.feedback = (
+                "✅ ممتاز! إجابتكِ صحيحة."
             )
 
-            # تحديث مستوى المفهوم
-            concept = question["concept"]
-
-            st.session_state.mastery[concept] += 1
-
-            st.session_state.feedback = "correct"
+            st.session_state.answered = True
+            st.rerun()
 
         else:
 
+            update_mastery(concept, False)
             st.session_state.attempt += 1
 
             if st.session_state.attempt == 1:
-
                 st.session_state.hint_level = 1
+                st.session_state.feedback = (
+                    "ليست الإجابة الصحيحة بعد. "
+                    "استخدمي التلميح الأول ثم حاولي مرة أخرى."
+                )
 
             elif st.session_state.attempt == 2:
-
                 st.session_state.hint_level = 2
+                st.session_state.feedback = (
+                    "محاولة جيدة. إليكِ تلميحًا أكثر تحديدًا."
+                )
 
             else:
-
-                st.session_state.hint_level = 3
-
-            st.session_state.feedback = "wrong"
-
-        st.rerun()
-
-
-    # =====================================================
-    # إذا كانت الإجابة صحيحة
-    # =====================================================
-
-    if st.session_state.feedback == "correct":
-
-        st.success(
-            "🌟 أحسنتِ، إجابتكِ صحيحة."
-        )
-
-        st.info(
-            "نبضة سجلت هذه الإجابة كدليل "
-            "أولي على فهمكِ للمفهوم."
-        )
-
-        if st.button(
-            "السؤال التالي ←",
-            key=f"next_{index}"
-        ):
-
-            st.session_state.question_index += 1
-
-            st.session_state.attempt = 0
-            st.session_state.hint_level = 0
-            st.session_state.feedback = ""
-
-            if (
-                st.session_state.question_index
-                >= len(questions)
-            ):
-
-                st.session_state.completed = True
+                st.session_state.show_lesson = True
+                st.session_state.feedback = (
+                    "سنراجع الفكرة سريعًا ثم نجرب سؤالًا مكافئًا."
+                )
 
             st.rerun()
 
+# =========================================================
+# التغذية الراجعة
+# =========================================================
 
-    # =====================================================
-    # التلميح الأول
-    # =====================================================
+if st.session_state.feedback:
+    if st.session_state.answered:
+        st.success(st.session_state.feedback)
+    else:
+        st.warning(st.session_state.feedback)
 
-    elif st.session_state.hint_level == 1:
+# =========================================================
+# إذا كانت الإجابة صحيحة
+# =========================================================
 
-        st.warning(
-            "ليست الإجابة الأدق بعد."
-        )
+if st.session_state.answered:
 
-        st.info(
-            "💡 تلميح نبضة H1:\n\n"
-            + question["hint1"]
-        )
+    st.info(
+        f"حالة المفهوم الآن: "
+        f"{st.session_state.mastery[concept]['status']}"
+    )
 
-        st.caption(
-            "حاولي مرة أخرى اعتمادًا على التلميح."
-        )
+    if st.button(
+        "السؤال التالي ➜",
+        use_container_width=True,
+        key=f"next_{question['id']}"
+    ):
+        next_question()
+        st.rerun()
 
+    st.stop()
 
-    # =====================================================
-    # التلميح الثاني
-    # =====================================================
+# =========================================================
+# التلميحات
+# =========================================================
 
-    elif st.session_state.hint_level == 2:
+if (
+    st.session_state.hint_level >= 1
+    and not st.session_state.show_lesson
+):
 
-        st.warning(
-            "ما زلنا نحتاج إلى التفكير قليلًا."
-        )
+    st.info(
+        f"💡 التلميح الأول:\n\n"
+        f"{question['hint1']}"
+    )
 
-        st.info(
-            "💡 تلميح نبضة H2:\n\n"
-            + question["hint2"]
-        )
+if (
+    st.session_state.hint_level >= 2
+    and not st.session_state.show_lesson
+):
 
-        st.caption(
-            "قارني بين وظيفة كل اختيار ثم حاولي مجددًا."
-        )
+    st.info(
+        f"💡 التلميح الثاني:\n\n"
+        f"{question['hint2']}"
+    )
 
+# =========================================================
+# الشرح المصغر
+# =========================================================
 
-    # =====================================================
-    # الشرح المصغر
-    # =====================================================
+if st.session_state.show_lesson:
 
-    elif st.session_state.hint_level >= 3:
+    lesson_text = question.get(
+        "micro_lesson",
+        question.get("lesson", "")
+    )
 
-        st.warning(
-            "سأشرح لكِ الفكرة باختصار 🌷"
-        )
+    st.markdown("### 📘 مراجعة سريعة")
 
-        st.info(
-            "📘 شرح نبضة:\n\n"
-            + question["lesson"]
-        )
+    st.info(lesson_text)
 
-        st.markdown(
-            "### 🔄 والآن سؤال مشابه"
-        )
+    if st.button(
+        "فهمتُ، اختبريني بسؤال آخر",
+        use_container_width=True,
+        key=f"equiv_start_{question['id']}"
+    ):
+        st.session_state.equivalent_mode = True
+        st.session_state.show_lesson = False
+        st.session_state.feedback = ""
+        st.rerun()
+
+# =========================================================
+# السؤال المكافئ
+# =========================================================
+
+if st.session_state.equivalent_mode:
+
+    equivalent_text = question.get(
+        "equivalent",
+        question["question"]
+    )
+
+    st.markdown(
+        f"""
+        <div class="question-box">
+        🔄 سؤال للتحقق من الفهم<br><br>
+        {equivalent_text}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    equivalent_answer = st.radio(
+        "اختاري إجابتكِ:",
+        question["options"],
+        index=None,
+        key=f"equivalent_{question['id']}"
+    )
+
+    if st.button(
+        "تحققي من فهمي",
+        use_container_width=True,
+        key=f"equiv_check_{question['id']}"
+    ):
+
+        if equivalent_answer is None:
+            st.warning("اختاري إجابة أولًا.")
+
+        elif equivalent_answer == question["answer"]:
+
+            update_mastery(concept, True)
+
+            st.success(
+                "✅ رائع! الآن أظهرتِ فهمًا أفضل للمفهوم."
+            )
+
+            st.session_state.answered = True
+            st.session_state.equivalent_mode = False
+            st.session_state.feedback = (
+                "تم تسجيل تقدمكِ في هذا المفهوم."
+            )
+
+            st.rerun()
+
+        else:
+
+            update_mastery(concept, False)
+
+            st.error(
+                "ما زال هذا المفهوم يحتاج إلى بعض الدعم. "
+                "لا بأس، سيعود ScAI إليه في جلسات المراجعة."
+            )
+
+            st.session_state.answered = True
+            st.session_state.equivalent_mode = False
+            st.session_state.feedback = (
+                "سنسجل هذا المفهوم ضمن الموضوعات التي تحتاج إلى مراجعة."
+            )
+
+            st.rerun()
+
+# =========================================================
+# خريطة الإتقان الجانبية
+# =========================================================
+
+with st.expander("🧠 خريطة إتقاني"):
+
+    for concept_id, concept_name in CONCEPTS.items():
+
+        data = st.session_state.mastery[concept_name]
 
         st.write(
-            question["equivalent"]
+            f"{concept_id} — "
+            f"{concept_name}: "
+            f"{data['status']}"
         )
-
-        equivalent_answer = st.radio(
-            "اختاري الإجابة:",
-            question["options"],
-            index=None,
-            key=f"equivalent_{index}"
-        )
-
-        if st.button(
-            "تحققي من السؤال المشابه",
-            key=f"equivalent_check_{index}"
-        ):
-
-            if equivalent_answer is None:
-
-                st.warning(
-                    "اختاري إجابة أولًا."
-                )
-
-            elif (
-                equivalent_answer
-                == question["answer"]
-            ):
-
-                st.success(
-                    "🌟 ممتاز! وصلتِ إلى الفكرة."
-                )
-
-                concept = question["concept"]
-
-                st.session_state.mastery[concept] += 1
-
-                st.session_state.feedback = "correct"
-
-                st.rerun()
-
-            else:
-
-                st.error(
-                    "هذه الفكرة ما زالت تحتاج إلى دعم، "
-                    "وسنعود إليها مرة أخرى في الجلسة."
-                )
