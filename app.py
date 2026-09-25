@@ -87,14 +87,22 @@ for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# إنشاء خريطة إتقان لكل المفاهيم
+# إنشاء/تحديث خريطة الإتقان لكل المفاهيم
 for concept_id, concept_name in CONCEPTS.items():
-    if concept_name not in st.session_state.mastery:
+    old_value = st.session_state.mastery.get(concept_name)
+
+    if not isinstance(old_value, dict):
         st.session_state.mastery[concept_name] = {
             "correct": 0,
             "wrong": 0,
             "status": "⚪ لم يُقَيَّم"
         }
+    else:
+        st.session_state.mastery[concept_name].setdefault("correct", 0)
+        st.session_state.mastery[concept_name].setdefault("wrong", 0)
+        st.session_state.mastery[concept_name].setdefault(
+            "status", "⚪ لم يُقَيَّم"
+        )
 
 # =========================================================
 # وظائف مساعدة
